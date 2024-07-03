@@ -1,0 +1,19 @@
+[tool.poetry]
+name = "text2pic-final"
+version = "0.1.0"
+description = ""
+authors = ["Carlota de la Vega <carlotadlavega@correo.ugr.es>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.10"
+keras = "^3.4.1"
+numpy = "<2.0.0"
+tensorflow = "2.16.*"
+pylint = "^3.2.5"
+pytest = "^8.2.2"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
