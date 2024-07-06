@@ -74,7 +74,9 @@ class Handler:
         try:
             generator, discriminator = builders.build_models()
             cond_gan = builders.build_conditional_gan(generator, discriminator)
-            cond_gan = utils.load_model_with_weights("data/models/cgan_nums.weights.h5", cond_gan)
+            cond_gan = utils.load_model_with_weights(
+                "data/models/cgan_nums.weights.h5", cond_gan
+            )
 
             img = drawing.draw_number(text, cond_gan)
             img = img.tolist()
@@ -87,13 +89,21 @@ class Handler:
 
             logging.info("Image generated successfully: %s", text)
 
-        except Exception as e:
+        except IOError as e:
             response = {
                 "status": "error",
-                "message": f"Error generating image: {str(e)}",
+                "message": f"Error accessing image file: {str(e)}",
             }
 
-            logging.error("Error generating image: %s", str(e))
+            logging.error("Error accessing image file: %s", str(e))
+
+        except ValueError as e:
+            response = {
+                "status": "error",
+                "message": f"Invalid value: {str(e)}",
+            }
+
+            logging.error("Invalid value: %s", str(e))
 
         return response
 
