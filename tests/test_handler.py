@@ -35,14 +35,21 @@ def test_execute_command_process_text(socket):
     }
 
 
-def test_execute_command_generate_number(socket):
-    request = {"command": "generate_number", "text": "Hello, World!"}
+def test_generate_number_success(socket):
+    request = {"command": "generate_number", "text": "8"}
     handler = Handler(socket)
-    response = handler._execute_command(request)
-    assert response == {
-        "status": "error",
-        "message": "Command not implemented",
-    }
+    response = handler._generate_number(request["text"])
+    assert response["status"] == "success"
+    assert response["message"] == "Image generated successfully"
+    assert "image" in response
+
+
+def test_generate_number_error(socket):
+    request = {"command": "generate_number", "text": "invalid"}
+    handler = Handler(socket)
+    response = handler._generate_number(request["text"])
+    assert response["status"] == "error"
+    assert "message" in response
 
 
 def test_execute_command_generate_image(socket):
