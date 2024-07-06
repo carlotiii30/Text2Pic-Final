@@ -1,6 +1,9 @@
 import json
 import logging
 
+from src.nums import builders, drawing
+from src import utils
+
 
 # pylint: disable=too-few-public-methods
 class Handler:
@@ -68,12 +71,29 @@ class Handler:
         return response
 
     def _generate_number(self, text):
-        response = {
-            "status": "error",
-            "message": "Command not implemented",
-        }
+        try:
+            generator, discriminator = builders.build_models()
+            cond_gan = builders.build_conditional_gan(generator, discriminator)
+            cond_gan = utils.load_model_with_weights("data/models/cgan_nums.weights.h5", cond_gan)
 
-        logging.error("Command not implemented: %s", text)
+            img = drawing.draw_number(text, cond_gan)
+            img = img.tolist()
+
+            response = {
+                "status": "success",
+                "message": "Image generated successfully",
+                "image": img,
+            }
+
+            logging.info("Image generated successfully: %s", text)
+
+        except Exception as e:
+            response = {
+                "status": "error",
+                "message": f"Error generating image: {str(e)}",
+            }
+
+            logging.error("Error generating image: %s", str(e))
 
         return response
 
