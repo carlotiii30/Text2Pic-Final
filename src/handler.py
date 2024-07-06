@@ -38,7 +38,7 @@ class Handler:
         if command == "process_text":
             response = self._process_text(text)
 
-        if command == "generate_number":
+        elif command == "generate_number":
             response = self._generate_number(text)
 
         elif command == "generate_image":
