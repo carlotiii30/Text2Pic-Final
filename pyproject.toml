@@ -12,6 +12,7 @@ numpy = "<2.0.0"
 tensorflow = "2.16.*"
 pylint = "^3.2.5"
 pytest = "^8.2.2"
+imageio = "^2.34.2"
 
 
 [build-system]
