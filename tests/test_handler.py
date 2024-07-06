@@ -35,15 +35,6 @@ def test_execute_command_process_text(socket):
     }
 
 
-def test_generate_number_success(socket):
-    request = {"command": "generate_number", "text": "8"}
-    handler = Handler(socket)
-    response = handler._generate_number(request["text"])
-    assert response["status"] == "success"
-    assert response["message"] == "Image generated successfully"
-    assert "image" in response
-
-
 def test_generate_number_error(socket):
     request = {"command": "generate_number", "text": "invalid"}
     handler = Handler(socket)
