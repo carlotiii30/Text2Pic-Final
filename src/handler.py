@@ -75,7 +75,7 @@ class Handler:
             generator, discriminator = builders.build_models()
             cond_gan = builders.build_conditional_gan(generator, discriminator)
             cond_gan = utils.load_model_with_weights(
-                "data/models/cgan_nums.weights.h5", cond_gan
+                cond_gan, "data/models/cgan_nums.weights.h5"
             )
 
             img = drawing.draw_number(text, cond_gan)

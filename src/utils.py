@@ -11,6 +11,6 @@ def save_model_weights(cond_gan, filename):
     cond_gan.save_weights(filename)
 
 
-def load_model_with_weights(filename, cond_gan):
+def load_model_with_weights(cond_gan, filename):
     cond_gan.load_weights(filename)
     return cond_gan
