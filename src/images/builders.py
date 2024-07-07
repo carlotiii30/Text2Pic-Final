@@ -25,10 +25,11 @@ def build_models():
     return generator, discriminator
 
 
-def _build_generator(vocab_size, embedding_dim=100):
+def _build_generator(vocab_size, embedding_dim=100, max_length=20):
     model = Sequential()
+    model.add(tf.keras.Input(shape=(max_length,)))
     model.add(Embedding(input_dim=vocab_size, output_dim=embedding_dim))
-    model.add(LSTM(256))
+    model.add(LSTM(256, return_sequences=False))
     model.add(Dense(128 * 8 * 8, activation="relu"))
     model.add(Reshape((8, 8, 128)))
     model.add(Conv2DTranspose(128, kernel_size=4, strides=2, padding="same"))
@@ -38,14 +39,14 @@ def _build_generator(vocab_size, embedding_dim=100):
     model.add(
         Conv2DTranspose(3, kernel_size=4, strides=2, padding="same", activation="tanh")
     )
+
     return model
 
 
 def _build_discriminator(input_shape):
     model = Sequential()
-    model.add(
-        Conv2D(64, kernel_size=4, strides=2, input_shape=input_shape, padding="same")
-    )
+    model.add(tf.keras.Input(shape=input_shape))
+    model.add(Conv2D(64, kernel_size=4, strides=2, padding="same"))
     model.add(LeakyReLU(negative_slope=0.2))
     model.add(Dropout(0.3))
     model.add(Conv2D(128, kernel_size=4, strides=2, padding="same"))
