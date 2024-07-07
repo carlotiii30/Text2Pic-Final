@@ -16,7 +16,9 @@ class Server:
             print(f"Server listening on port {self.port}")
             while True:
                 client_socket, _ = server_socket.accept()
-                threading.Thread(target=self.client_handler, args=(client_socket,)).start()
+                threading.Thread(
+                    target=self.client_handler, args=(client_socket,)
+                ).start()
 
     def client_handler(self, client_socket):
         handler = Handler(client_socket)

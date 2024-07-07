@@ -1,5 +1,6 @@
 import os
 
+
 def train_model(dataset, cond_gan):
     cond_gan.fit(dataset, epochs=50)
 

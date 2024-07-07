@@ -12,7 +12,9 @@ def load_dataset():
     (x_train, y_train), (x_test, y_test) = dataset.load_data()
 
     all_images = np.concatenate([x_train, x_test]).astype("float32") / 255.0
-    all_labels = keras.utils.to_categorical(np.concatenate([y_train, y_test]), num_classes)
+    all_labels = keras.utils.to_categorical(
+        np.concatenate([y_train, y_test]), num_classes
+    )
 
     all_images = np.reshape(all_images, (-1, image_size, image_size, num_channels))
 

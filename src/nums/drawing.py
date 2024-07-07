@@ -4,6 +4,7 @@ import numpy as np
 
 from src.nums import builders, dataset
 
+
 def draw_number(number, cond_gan):
     number = int(number)
     noise = np.random.normal(size=(1, dataset.latent_dim))

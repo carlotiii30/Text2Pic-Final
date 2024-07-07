@@ -21,9 +21,13 @@ def build_models():
             keras.layers.Reshape((7, 7, gen_channels)),
             keras.layers.Conv2DTranspose(128, kernel_size=4, strides=2, padding="same"),
             keras.layers.LeakyReLU(negative_slope=0.2),
-            keras.layers.Conv2DTranspose(dataset.batch_size, kernel_size=4, strides=2, padding="same"),
+            keras.layers.Conv2DTranspose(
+                dataset.batch_size, kernel_size=4, strides=2, padding="same"
+            ),
             keras.layers.LeakyReLU(negative_slope=0.2),
-            keras.layers.Conv2DTranspose(1, kernel_size=7, strides=1, padding="same", activation="sigmoid"),
+            keras.layers.Conv2DTranspose(
+                1, kernel_size=7, strides=1, padding="same", activation="sigmoid"
+            ),
         ],
         name="generator",
     )
@@ -32,7 +36,9 @@ def build_models():
     discriminator = keras.Sequential(
         [
             keras.layers.InputLayer((28, 28, dis_channels)),
-            keras.layers.Conv2D(dataset.batch_size, kernel_size=3, strides=2, padding="same"),
+            keras.layers.Conv2D(
+                dataset.batch_size, kernel_size=3, strides=2, padding="same"
+            ),
             keras.layers.LeakyReLU(negative_slope=0.2),
             keras.layers.Conv2D(128, kernel_size=3, strides=2, padding="same"),
             keras.layers.LeakyReLU(negative_slope=0.2),
