@@ -2,11 +2,16 @@ import numpy as np
 
 
 def train(generator, discriminator, combined, dataset, epochs=50, batch_size=64):
+    print("Iniciando el entrenamiento...")
+
     for epoch in range(epochs):
-        for batch in dataset:
+        print(f"Epoch {epoch+1}/{epochs} iniciada.")
+        
+        for batch_idx, batch in enumerate(dataset, start=1):
             imgs, captions = batch
 
             if imgs.shape[0] != batch_size:
+                print(f"Batch {batch_idx} ignorado debido a tamaño incorrecto.")
                 continue
 
             noise = np.random.normal(0, 1, (batch_size, 80))
@@ -22,4 +27,8 @@ def train(generator, discriminator, combined, dataset, epochs=50, batch_size=64)
 
             g_loss = combined.train_on_batch(combined_input, valid)
 
-        print(f"Epoch {epoch}, FINALIZADA")
+            print(f"Batch {batch_idx} procesado. d_loss: {d_loss}, g_loss: {g_loss}")
+
+        print(f"Epoch {epoch+1}/{epochs} FINALIZADA")
+
+    print("Entrenamiento completado.")

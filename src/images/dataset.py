@@ -80,7 +80,7 @@ def load_coco_subset(
     data_dir,
     annotation_file,
     batch_size=64,
-    num_samples=5000,
+    num_samples=50000,
     tokenizer_path="data/tokenizer.pkl",
 ):
     print("Iniciando la carga del subset del dataset COCO...")

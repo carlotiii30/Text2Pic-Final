@@ -25,7 +25,7 @@ def build_models():
     return generator, discriminator
 
 
-def _build_generator(vocab_size, embedding_dim=100, max_length=20):
+def _build_generator(vocab_size, embedding_dim=100, max_length=100):
     model = Sequential()
     model.add(tf.keras.Input(shape=(max_length,)))
     model.add(Embedding(input_dim=vocab_size, output_dim=embedding_dim))
