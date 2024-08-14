@@ -22,15 +22,15 @@ def generate_and_visualize_image(generator, text_sequence):
 data_dir = "data/coco"
 annotation_file = os.path.join(data_dir, "annotations/captions_train2017.json")
 train_dir = os.path.join(data_dir, "train2017")
-# subset = dataset.load_coco_subset(train_dir, annotation_file)
-full_dataset = dataset.load_coco_dataset(train_dir, annotation_file)
+subset = dataset.load_coco_subset(train_dir, annotation_file)
+# full_dataset = dataset.load_coco_dataset(train_dir, annotation_file)
 
 # Construir modelos
 generator, discriminator = builders.build_models()
 combined = builders.build_conditional_gan(generator, discriminator)
 
 # # Entrenar modelos
-training.train(generator, discriminator, combined, full_dataset)
+training.train(generator, discriminator, combined, subset)
 
 # # Guardar los modelos
 utils.save_model_weights(generator, "data/models/generator_weights.weights.h5")
