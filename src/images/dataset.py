@@ -24,7 +24,11 @@ def preprocess_text(text, tokenizer, max_length):
 def load_coco_dataset(
     data_dir, annotation_file, batch_size=64, tokenizer_path="data/tokenizer.pkl"
 ):
+    print("Iniciando la carga del dataset COCO...")
+    
     coco = COCO(annotation_file)
+    print("Archivo de anotaciones cargado.")
+    
     image_ids = coco.getImgIds()
     images_info = coco.loadImgs(image_ids)
 
@@ -33,6 +37,7 @@ def load_coco_dataset(
 
     with open(tokenizer_path, "rb") as file:
         tokenizer = pickle.load(file)
+    print("Tokenizer cargado.")
 
     for img_info in images_info:
         img_id = img_info["id"]
@@ -40,6 +45,7 @@ def load_coco_dataset(
         image_path = f"{data_dir}/{file_name}"
 
         image = preprocess_image(image_path)
+        print(f"Imagen procesada: {file_name}")
 
         ann_ids = coco.getAnnIds(imgIds=img_id)
         anns = coco.loadAnns(ann_ids)
@@ -49,8 +55,11 @@ def load_coco_dataset(
                 captions.append(ann["caption"])
                 images.append(image)
 
+    print("Todas las imágenes y captions han sido procesadas.")
+
     sequences = tokenizer.texts_to_sequences(captions)
     padded_sequences = pad_sequences(sequences, maxlen=max_length)
+    print("Textos convertidos a secuencias y secuencias rellenadas.")
 
     images = np.array(images)
     captions = np.array(padded_sequences)
@@ -61,7 +70,9 @@ def load_coco_dataset(
         .batch(batch_size)
         .prefetch(buffer_size=tf.data.experimental.AUTOTUNE)
     )
+    print("Dataset de TensorFlow creado.")
 
+    print("Carga del dataset COCO completada.")
     return dataset
 
 
