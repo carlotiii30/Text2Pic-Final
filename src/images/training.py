@@ -1,7 +1,7 @@
 import numpy as np
 
 
-def train(generator, discriminator, combined, dataset, epochs=50, batch_size=64):
+def train(generator, discriminator, combined, dataset, epochs=500, batch_size=64):
     print("Iniciando el entrenamiento...")
 
     for epoch in range(epochs):
