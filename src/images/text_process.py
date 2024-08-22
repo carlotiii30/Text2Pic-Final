@@ -4,8 +4,8 @@ from pycocotools.coco import COCO
 from tensorflow.keras.preprocessing.text import Tokenizer
 
 # Definir el tamaño del vocabulario y la longitud máxima
-vocab_size = 5000
-max_length = 20
+vocab_size = 27549
+max_length = 60
 
 # Directorio y archivo de anotaciones de COCO
 data_dir = "data/coco"

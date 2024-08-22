@@ -27,7 +27,10 @@ subset = dataset.load_coco_subset(train_dir, annotation_file)
 
 # Construir modelos
 generator, discriminator = builders.build_models()
+generator.summary()
+discriminator.summary()
 combined = builders.build_conditional_gan(generator, discriminator)
+combined.summary()
 
 # # Entrenar modelos
 training.train(generator, discriminator, combined, subset)

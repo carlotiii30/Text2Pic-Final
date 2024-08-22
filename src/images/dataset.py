@@ -25,10 +25,10 @@ def load_coco_dataset(
     data_dir, annotation_file, batch_size=64, tokenizer_path="data/tokenizer.pkl"
 ):
     print("Iniciando la carga del dataset COCO...")
-    
+
     coco = COCO(annotation_file)
     print("Archivo de anotaciones cargado.")
-    
+
     image_ids = coco.getImgIds()
     images_info = coco.loadImgs(image_ids)
 
@@ -56,6 +56,7 @@ def load_coco_dataset(
                 images.append(image)
 
     print("Todas las imágenes y captions han sido procesadas.")
+    print(f"Número total de palabras en el vocabulario: {len(tokenizer.word_index)}")
 
     sequences = tokenizer.texts_to_sequences(captions)
     padded_sequences = pad_sequences(sequences, maxlen=max_length)
@@ -80,7 +81,7 @@ def load_coco_subset(
     data_dir,
     annotation_file,
     batch_size=64,
-    num_samples=50000,
+    num_samples=500,
     tokenizer_path="data/tokenizer.pkl",
 ):
     print("Iniciando la carga del subset del dataset COCO...")
@@ -117,6 +118,7 @@ def load_coco_subset(
                 images.append(image)
 
     print(f"Todas las imágenes y captions han sido procesadas. Total: {total_images}")
+    print(f"Número total de palabras en el vocabulario: {len(tokenizer.word_index)}")
 
     sequences = tokenizer.texts_to_sequences(captions)
     padded_sequences = pad_sequences(sequences, maxlen=max_length)

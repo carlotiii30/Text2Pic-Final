@@ -13,21 +13,20 @@ from tensorflow.keras.layers import (
 from tensorflow.keras.models import Sequential, Model
 from tensorflow.keras.optimizers import Adam
 
-
-latent_dim = 100
-vocab_size = 5000
+latent_dim = 80
+vocab_size = 27549
+max_length = 60
 
 
 def build_models():
     generator = _build_generator(vocab_size)
-    discriminator = _build_discriminator((64, 64, 3))
-
+    discriminator = _build_discriminator((64, 128, 3))  # Entrada del discriminador
     return generator, discriminator
 
 
-def _build_generator(vocab_size, embedding_dim=100, max_length=100):
+def _build_generator(vocab_size, embedding_dim=100):
     model = Sequential()
-    model.add(tf.keras.Input(shape=(max_length,)))
+    model.add(tf.keras.Input(shape=(128,)))
     model.add(Embedding(input_dim=vocab_size, output_dim=embedding_dim))
     model.add(LSTM(256, return_sequences=False))
     model.add(Dense(128 * 8 * 8, activation="relu"))
@@ -36,22 +35,35 @@ def _build_generator(vocab_size, embedding_dim=100, max_length=100):
     model.add(LeakyReLU(negative_slope=0.2))
     model.add(Conv2DTranspose(128, kernel_size=4, strides=2, padding="same"))
     model.add(LeakyReLU(negative_slope=0.2))
+    model.add(Conv2DTranspose(64, kernel_size=4, strides=2, padding="same"))
+    model.add(LeakyReLU(negative_slope=0.2))
+    model.add(Conv2DTranspose(64, kernel_size=(4, 5), strides=(1, 2), padding="same"))
+    model.add(LeakyReLU(negative_slope=0.2))
     model.add(
-        Conv2DTranspose(3, kernel_size=4, strides=2, padding="same", activation="tanh")
+        Conv2DTranspose(
+            3, kernel_size=(4, 3), strides=(1, 1), padding="same", activation="tanh"
+        )
     )
 
     return model
 
 
-def _build_discriminator(input_shape):
+def _build_discriminator(input_shape=(64, 128, 3)):
     model = Sequential()
-    model.add(tf.keras.Input(shape=input_shape))
-    model.add(Conv2D(64, kernel_size=4, strides=2, padding="same"))
+    model.add(
+        Conv2D(64, kernel_size=4, strides=2, padding="same", input_shape=input_shape)
+    )
     model.add(LeakyReLU(negative_slope=0.2))
-    model.add(Dropout(0.3))
+    model.add(Dropout(0.25))
     model.add(Conv2D(128, kernel_size=4, strides=2, padding="same"))
     model.add(LeakyReLU(negative_slope=0.2))
-    model.add(Dropout(0.3))
+    model.add(Dropout(0.25))
+    model.add(Conv2D(256, kernel_size=4, strides=2, padding="same"))
+    model.add(LeakyReLU(negative_slope=0.2))
+    model.add(Dropout(0.25))
+    model.add(Conv2D(512, kernel_size=4, strides=2, padding="same"))
+    model.add(LeakyReLU(negative_slope=0.2))
+    model.add(Dropout(0.25))
     model.add(Flatten())
     model.add(Dense(1, activation="sigmoid"))
 
@@ -63,7 +75,7 @@ def build_conditional_gan(generator, discriminator):
         loss="binary_crossentropy", optimizer=Adam(0.0002, 0.5), metrics=["accuracy"]
     )
 
-    z = tf.keras.Input(shape=(latent_dim,))
+    z = tf.keras.Input(shape=(128,))
     img = generator(z)
     discriminator.trainable = False
     valid = discriminator(img)
