@@ -14,7 +14,7 @@ def train(
     discriminator,
     combined,
     dataset,
-    epochs=1,
+    epochs=20,
     batch_size=64,
 ):
     print("Iniciando el entrenamiento...")

@@ -82,7 +82,7 @@ def load_coco_subset(
     data_dir,
     annotation_file,
     batch_size=64,
-    num_samples=500,
+    num_samples=5000,
     tokenizer_path="data/tokenizer.pkl",
     target_size=(
         32,
@@ -100,6 +100,7 @@ def load_coco_subset(
 
     captions = []
     images = []
+    image_captions = {}
 
     with open(tokenizer_path, "rb") as file:
         tokenizer = pickle.load(file)
@@ -112,15 +113,21 @@ def load_coco_subset(
         image_path = f"{data_dir}/{file_name}"
 
         image = preprocess_image(image_path, target_size=target_size)
-        print(f"Imagen procesada: {file_name} ({idx}/{total_images})")
+        if idx % 100 == 0:
+            print(f"Imagen procesada: {file_name} ({idx}/{total_images})")
 
         ann_ids = coco.getAnnIds(imgIds=img_id)
         anns = coco.loadAnns(ann_ids)
+
+        image_caption_list = []
 
         for ann in anns:
             if "caption" in ann:
                 captions.append(ann["caption"])
                 images.append(image)
+                image_caption_list.append(ann["caption"])
+
+        image_captions[file_name] = image_caption_list
 
     print(f"Todas las imágenes y captions han sido procesadas. Total: {total_images}")
     print(f"Número total de palabras en el vocabulario: {len(tokenizer.word_index)}")
@@ -141,4 +148,11 @@ def load_coco_subset(
     print("Dataset de TensorFlow creado.")
 
     print("Carga del subset del dataset COCO completada.")
+
+    for img_name, captions in image_captions.items():
+        print(f"Imagen: {img_name}")
+        for caption in captions:
+            print(f"  - {caption}")
+        print()
+
     return dataset
