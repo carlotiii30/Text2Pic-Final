@@ -33,33 +33,33 @@ combined = builders.build_conditional_gan(generator, discriminator)
 combined.summary()
 
 # # Entrenar modelos
-training.train(generator, discriminator, combined, subset)
+# training.train(generator, discriminator, combined, subset)
 
 # # Guardar los modelos
-utils.save_model_weights(generator, "data/models/generator_weights.weights.h5")
-utils.save_model_weights(discriminator, "data/models/discriminator_weights.weights.h5")
-utils.save_model_weights(combined, "data/models/combined_weights.weights.h5")
+# utils.save_model_weights(generator, "data/models/generator_weights.weights.h5")
+# utils.save_model_weights(discriminator, "data/models/discriminator_weights.weights.h5")
+# utils.save_model_weights(combined, "data/models/combined_weights.weights.h5")
 
 # Cargar los modelos
-# generator = utils.load_model_with_weights(
-#     generator, "data/models/generator_weights.weights.h5"
-# )
-# discriminator = utils.load_model_with_weights(
-#     discriminator, "data/models/discriminator_weights.weights.h5"
-# )
-# combined = utils.load_model_with_weights(
-#     combined, "data/models/combined_weights.weights.h5"
-# )
+generator = utils.load_model_with_weights(
+    generator, "data/models/generator_weights.weights.h5"
+)
+discriminator = utils.load_model_with_weights(
+    discriminator, "data/models/discriminator_weights.weights.h5"
+)
+combined = utils.load_model_with_weights(
+    combined, "data/models/combined_weights.weights.h5"
+)
 
 # Tokenizer
-# tokenizer_path = "data/tokenizer.pkl"
+tokenizer_path = "data/tokenizer.pkl"
 
-# with open(tokenizer_path, "rb") as file:
-#     tokenizer = pickle.load(file)
+with open(tokenizer_path, "rb") as file:
+    tokenizer = pickle.load(file)
 
 # # Preprocesar el texto de entrada
-# input_text = "A giraffe"
-# text_sequence = dataset.preprocess_text(input_text, tokenizer, text_process.max_length)
+input_text = "A giraffe"
+text_sequence = dataset.preprocess_text(input_text, tokenizer, text_process.max_length)
 
 # # Generar y visualizar la imagen
-# generate_and_visualize_image(generator, text_sequence)
+generate_and_visualize_image(generator, text_sequence)

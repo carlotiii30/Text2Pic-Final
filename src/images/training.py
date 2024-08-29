@@ -1,5 +1,4 @@
 import numpy as np
-
 from tensorflow.image import resize
 
 latent_dim = 80
@@ -7,7 +6,7 @@ max_length = 60
 
 
 def resize_real_images(imgs):
-    return resize(imgs, (64, 128))
+    return resize(imgs, (32, 64))  # Cambiado de (64, 128) a (32, 64)
 
 
 def train(
@@ -15,7 +14,7 @@ def train(
     discriminator,
     combined,
     dataset,
-    epochs=500,
+    epochs=1,
     batch_size=64,
 ):
     print("Iniciando el entrenamiento...")
@@ -32,7 +31,7 @@ def train(
                 print(f"Batch {batch_idx} ignorado debido a tamaño incorrecto.")
                 continue
 
-            noise = np.random.normal(0, 1, (batch_size, 68))
+            noise = np.random.normal(0, 1, (batch_size, 68))  # Ajusta según necesidad
             captions_input = np.array(captions)
             combined_input = np.hstack((noise, captions_input))
 
@@ -50,7 +49,9 @@ def train(
 
             # Entrena al generador
             discriminator.trainable = False
-            combined_input = combined_input.reshape((64, 128))
+            combined_input = combined_input.reshape(
+                (batch_size, 128)
+            )  # Ajusta si es necesario
             g_loss = combined.train_on_batch(combined_input, valid)
             discriminator.trainable = True
 

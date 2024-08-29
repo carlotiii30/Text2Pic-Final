@@ -1,16 +1,17 @@
-import tensorflow as tf
-from tensorflow.keras.preprocessing.sequence import pad_sequences
-from pycocotools.coco import COCO
-import numpy as np
 import pickle
+
+import numpy as np
+import tensorflow as tf
+from pycocotools.coco import COCO
+from tensorflow.keras.preprocessing.sequence import pad_sequences
 
 from src.images.text_process import max_length
 
 
-def preprocess_image(image_path):
+def preprocess_image(image_path, target_size=(32, 32)):
     image = tf.io.read_file(image_path)
     image = tf.image.decode_jpeg(image, channels=3)
-    image = tf.image.resize(image, [64, 64])
+    image = tf.image.resize(image, target_size)
     image = (image / 127.5) - 1
     return image
 
@@ -83,6 +84,10 @@ def load_coco_subset(
     batch_size=64,
     num_samples=500,
     tokenizer_path="data/tokenizer.pkl",
+    target_size=(
+        32,
+        32,
+    ),  # Añadir un parámetro opcional para definir el tamaño de la imagen
 ):
     print("Iniciando la carga del subset del dataset COCO...")
 
@@ -106,7 +111,7 @@ def load_coco_subset(
         file_name = img_info["file_name"]
         image_path = f"{data_dir}/{file_name}"
 
-        image = preprocess_image(image_path)
+        image = preprocess_image(image_path, target_size=target_size)
         print(f"Imagen procesada: {file_name} ({idx}/{total_images})")
 
         ann_ids = coco.getAnnIds(imgIds=img_id)
