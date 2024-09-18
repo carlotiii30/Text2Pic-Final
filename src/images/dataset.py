@@ -82,7 +82,7 @@ def load_coco_subset(
     data_dir,
     annotation_file,
     batch_size=64,
-    num_samples=5000,
+    num_samples=500,
     tokenizer_path="data/tokenizer.pkl",
     target_size=(
         32,
@@ -113,9 +113,6 @@ def load_coco_subset(
         image_path = f"{data_dir}/{file_name}"
 
         image = preprocess_image(image_path, target_size=target_size)
-        if idx % 100 == 0:
-            print(f"Imagen procesada: {file_name} ({idx}/{total_images})")
-
         ann_ids = coco.getAnnIds(imgIds=img_id)
         anns = coco.loadAnns(ann_ids)
 
@@ -129,12 +126,8 @@ def load_coco_subset(
 
         image_captions[file_name] = image_caption_list
 
-    print(f"Todas las imágenes y captions han sido procesadas. Total: {total_images}")
-    print(f"Número total de palabras en el vocabulario: {len(tokenizer.word_index)}")
-
     sequences = tokenizer.texts_to_sequences(captions)
     padded_sequences = pad_sequences(sequences, maxlen=max_length)
-    print("Textos convertidos a secuencias y secuencias rellenadas.")
 
     images = np.array(images)
     captions = np.array(padded_sequences)
@@ -145,14 +138,14 @@ def load_coco_subset(
         .batch(batch_size)
         .prefetch(buffer_size=tf.data.experimental.AUTOTUNE)
     )
-    print("Dataset de TensorFlow creado.")
 
     print("Carga del subset del dataset COCO completada.")
 
     for img_name, captions in image_captions.items():
-        print(f"Imagen: {img_name}")
-        for caption in captions:
-            print(f"  - {caption}")
-        print()
+        with open("data/captions.txt", "a") as file:
+            file.write(f"Imagen: {img_name}\n")
+            for caption in captions:
+                file.write(f"  - {caption}\n")
+            file.write("\n")
 
     return dataset

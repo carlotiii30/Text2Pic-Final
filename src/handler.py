@@ -36,7 +36,7 @@ class Handler:
 
     def _execute_command(self, request):
         command = request.get("command")
-        text = request.get("text", "")
+        text = request.get("params").get("text")
 
         if command == "process_text":
             response = self._process_text(text)

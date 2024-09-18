@@ -1,3 +1,4 @@
 models
 coco
 tokenizer.*
+captions*

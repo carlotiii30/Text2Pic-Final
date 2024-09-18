@@ -14,7 +14,7 @@ def train(
     discriminator,
     combined,
     dataset,
-    epochs=20,
+    epochs=90,
     batch_size=64,
 ):
     print("Iniciando el entrenamiento...")
@@ -54,8 +54,6 @@ def train(
             )  # Ajusta si es necesario
             g_loss = combined.train_on_batch(combined_input, valid)
             discriminator.trainable = True
-
-            print(f"Batch {batch_idx} procesado. d_loss: {d_loss}, g_loss: {g_loss}")
 
         print(f"Epoch {epoch+1}/{epochs} FINALIZADA")
 
