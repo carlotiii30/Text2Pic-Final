@@ -12,3 +12,12 @@ train_image: ## Train model
 
 train_number: ## Train model
 	poetry run python -m src.nums.training
+
+pylint: ## Run pylint
+	poetry run pylint --rcfile=.pylintrc src    
+
+isort: ## Run isort
+	poetry run isort src
+
+test: ## Run tests
+	poetry run pytest -s

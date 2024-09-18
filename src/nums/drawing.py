@@ -1,5 +1,5 @@
-import keras
 import imageio
+import keras
 import numpy as np
 
 from src.nums import builders, dataset

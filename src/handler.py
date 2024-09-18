@@ -1,8 +1,8 @@
 import json
 import logging
 
-from src.nums import builders, drawing
 from src import utils
+from src.nums import builders, drawing
 
 
 # pylint: disable=too-few-public-methods

@@ -1,5 +1,5 @@
-from src.nums import builders, dataset
 from src import utils
+from src.nums import builders, dataset
 
 dataset = dataset.load_dataset()
 generator, discriminator = builders.build_models()
