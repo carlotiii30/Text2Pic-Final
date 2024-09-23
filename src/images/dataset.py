@@ -17,8 +17,9 @@ def preprocess_image(image_path, target_size=(32, 32)):
 
 
 def preprocess_text(text, tokenizer, max_length):
+    text = "<START> " + text + " <END>"
     sequence = tokenizer.texts_to_sequences([text])
-    padded_sequence = pad_sequences(sequence, maxlen=max_length)
+    padded_sequence = pad_sequences(sequence, maxlen=max_length, padding="post")
     return padded_sequence
 
 
@@ -82,12 +83,12 @@ def load_coco_subset(
     data_dir,
     annotation_file,
     batch_size=64,
-    num_samples=500,
+    num_samples=2500,
     tokenizer_path="data/tokenizer.pkl",
     target_size=(
-        32,
-        32,
-    ),  # Añadir un parámetro opcional para definir el tamaño de la imagen
+        16,
+        16,
+    ),
 ):
     print("Iniciando la carga del subset del dataset COCO...")
 
@@ -106,8 +107,7 @@ def load_coco_subset(
         tokenizer = pickle.load(file)
     print("Tokenizer cargado.")
 
-    total_images = len(images_info)
-    for idx, img_info in enumerate(images_info, start=1):
+    for img_info in images_info:
         img_id = img_info["id"]
         file_name = img_info["file_name"]
         image_path = f"{data_dir}/{file_name}"
@@ -141,11 +141,11 @@ def load_coco_subset(
 
     print("Carga del subset del dataset COCO completada.")
 
-    for img_name, captions in image_captions.items():
-        with open("data/captions.txt", "a") as file:
-            file.write(f"Imagen: {img_name}\n")
-            for caption in captions:
-                file.write(f"  - {caption}\n")
-            file.write("\n")
+    # for img_name, captions in image_captions.items():
+    #     with open("data/captions_200.txt", "a") as file:
+    #         file.write(f"Imagen: {img_name}\n")
+    #         for caption in captions:
+    #             file.write(f"  - {caption}\n")
+    #         file.write("\n")
 
     return dataset

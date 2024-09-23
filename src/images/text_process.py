@@ -22,7 +22,8 @@ for img_id in image_ids:
     anns = coco.loadAnns(ann_ids)
     for ann in anns:
         if "caption" in ann:
-            captions.append(ann["caption"])
+            caption = "<START> " + ann["caption"] + " <END>"
+            captions.append(caption)
 
 # Crear y entrenar el Tokenizer
 tokenizer = Tokenizer(num_words=vocab_size, oov_token="<OOV>")
