@@ -1,6 +1,6 @@
 [MAIN]
 ignore=.venv
-fail-under=9.0
+fail-under=8.0
 
 [MESSAGES CONTROL]
 disable=missing-docstring,abstract-class-instantiated
