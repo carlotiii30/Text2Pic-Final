@@ -1,9 +1,11 @@
 import os
 
+
 def ensure_dir_exists(filepath):
     directory = os.path.dirname(filepath)
     if not os.path.exists(directory):
         os.makedirs(directory)
+
 
 def train_model(dataset, model):
     model.fit(dataset, epochs=50)

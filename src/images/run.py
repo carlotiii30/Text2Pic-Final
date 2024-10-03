@@ -1,101 +1,71 @@
 import os
-import numpy as np
-import pickle
-
-from src.images import builders, dataset, text_process, training
-from src import utils
-
-from PIL import Image
+import tensorflow as tf
+from tensorflow.keras import mixed_precision
+import matplotlib.pyplot as plt
+from src.images import builders, dataset, training
 
 
-def generate_and_save_image(generator, text_sequence, filename="generated_image.png"):
-    noise = np.random.normal(0, 1, (1, builders.latent_dim))
-    text_sequence = np.array(text_sequence).reshape(1, -1)
-    generated_image = generator.predict([noise, text_sequence])
-    generated_image = generated_image.squeeze()
+def generate_and_display_image(i, generator, tokenizer, caption, latent_dim=100):
+    # Generar un vector de ruido aleatorio
+    noise = tf.random.normal([1, latent_dim])
 
-    # Asegúrate de que la imagen generada tenga tres canales
-    if len(generated_image.shape) == 2:
-        generated_image = np.stack((generated_image,) * 3, axis=-1)
-
-    flattened_image = generated_image.flatten()
-
-    # Desnormalizar los píxeles
-    pixels_denormalized = [denormalize_pixel(pixel) for pixel in flattened_image]
-
-    # Convertimos la lista de píxeles en un array de numpy
-    image_data = np.array(pixels_denormalized, dtype=np.uint8)
-
-    # Redimensionamos la imagen para que sea 3D (alto, ancho, canales)
-    image_data = image_data.reshape(
-        (generated_image.shape[0], generated_image.shape[1], 3)
+    # Tokenizar la caption de prueba
+    caption_sequence = tokenizer.texts_to_sequences([caption])
+    caption_padded = tf.keras.preprocessing.sequence.pad_sequences(
+        caption_sequence, maxlen=60, padding="post"
     )
 
-    # Creamos la imagen con PIL
-    img = Image.fromarray(image_data, "RGB")  # 'RGB' para imágenes en color
+    # Generar la imagen n el modelo generador
+    generated_image = generator.predict([noise, caption_padded])
 
-    # Guardamos la imagen en un fichero
-    img.save(filename)
+    # Remover la normalización para visualizar correctamente la imagen (valores entre 0 y 1)
+    generated_image = (
+        generated_image + 1
+    ) / 2.0  # Si usaste tanh en la salida del generador
+
+    # Guardar la imagen generada
+    plt.imsave(f"generated_image_{i}.png", generated_image[0])
 
 
-def denormalize_pixel(pixel):
-    return int((pixel + 1) * 127.5)
+# Establecer el uso de Mixed Precision para mejorar el rendimiento
+policy = mixed_precision.Policy("mixed_float16")
+mixed_precision.set_global_policy(policy)
 
+strategy = tf.distribute.MirroredStrategy()
+
+# Parámetros
+latent_dim = 100
+image_shape = (32, 32, 3)  # Tamaño de las imágenes durante el entrenamiento
+vocab_size = 10000  # Vocabulario máximo de las captions
+max_length = 60  # Longitud máxima de las captions
 
 # Cargar dataset COCO
 data_dir = "data/coco"
 annotation_file = os.path.join(data_dir, "annotations/captions_train2017.json")
 train_dir = os.path.join(data_dir, "train2017")
-subset = dataset.load_coco_subset(train_dir, annotation_file)
-# full_dataset = dataset.load_coco_dataset(train_dir, annotation_file)
 
-# Construir modelos
-generator, discriminator = builders.build_models()
-combined = builders.build_conditional_gan(generator, discriminator)
+image_id_to_caption = dataset.load_coco_annotations(annotation_file)
+image_paths, captions = dataset.load_image_caption_pairs(
+    train_dir, image_id_to_caption, subset_size=1500
+)
+fullset, tokenizer = dataset.load_coco_dataset(image_paths, captions)
 
-# Entrenar modelos
-# training.train(generator, discriminator, combined, subset)
-
-# Guardar los modelos
-# utils.save_model_weights(generator, "data/models/generator_weights_a.weights.h5")
-# utils.save_model_weights(
-#     discriminator, "data/models/discriminator_weights_a.weights.h5"
-# )
-# utils.save_model_weights(combined, "data/models/combined_weights_a.weights.h5")
+# Construir el generador y discriminador
+generator = builders.build_generator(latent_dim, vocab_size, max_length)
+discriminator = builders.build_discriminator(image_shape, vocab_size, max_length)
 
 # Cargar los modelos
-generator = utils.load_model_with_weights(
-    generator, "data/models/generator_weights_reentrenado_0.weights.h5"
-)
-discriminator = utils.load_model_with_weights(
-    discriminator, "data/models/discriminator_weights_reentrenado_0.weights.h5"
-)
-combined = utils.load_model_with_weights(
-    combined, "data/models/combined_weights_reentrenado_0.weights.h5"
-)
+# generator = tf.keras.models.load_model("data/models/generator_final.h5")
+# discriminator = tf.keras.models.load_model("data/models/discriminator_final.h5")
 
-# Entrenamiento en bucle
-for i in range(7):
-    training.train(generator, discriminator, combined, subset)
-    utils.save_model_weights(
-        generator, f"data/models/generator_weights_reentrenado_{i}.weights.h5"
-    )
-    utils.save_model_weights(
-        discriminator, f"data/models/discriminator_weights_reentrenado_{i}.weights.h5"
-    )
-    utils.save_model_weights(
-        combined, f"data/models/combined_weights_reentrenado_{i}.weights.h5"
-    )
+# # Ajustar las tasas de aprendizaje para el reentrenamiento
+# optimizer_g = tf.keras.optimizers.Adam(learning_rate=0.0002)
+# optimizer_d = tf.keras.optimizers.Adam(learning_rate=0.00005)
 
-# Tokenizer
-tokenizer_path = "data/tokenizer.pkl"
+# Caption de prueba
+caption = "a man next to an ambulance"
 
-with open(tokenizer_path, "rb") as file:
-    tokenizer = pickle.load(file)
-
-# Preprocesar el texto de entrada
-input_text = "A boy standing on a beach"
-text_sequence = dataset.preprocess_text(input_text, tokenizer, text_process.max_length)
-
-# Generar y visualizar la imagen
-generate_and_save_image(generator, text_sequence)
+for i in range(6):
+    print(f"Epoch {i + 1}")
+    training.train_gan(generator, discriminator, fullset, latent_dim, epochs=9)
+    generate_and_display_image(i, generator, tokenizer, caption, latent_dim=100)

@@ -1,151 +1,86 @@
-import pickle
-
-import numpy as np
+import os
 import tensorflow as tf
-from pycocotools.coco import COCO
-from tensorflow.keras.preprocessing.sequence import pad_sequences
-
-from src.images.text_process import max_length
+import json
 
 
-def preprocess_image(image_path, target_size=(32, 32)):
-    image = tf.io.read_file(image_path)
-    image = tf.image.decode_jpeg(image, channels=3)
-    image = tf.image.resize(image, target_size)
-    image = (image / 127.5) - 1
-    return image
+def load_coco_annotations(json_path):
+    with open(json_path, "r") as f:
+        annotations = json.load(f)
+
+    image_id_to_caption = {}
+    for annotation in annotations["annotations"]:
+        image_id = annotation["image_id"]
+        caption = annotation["caption"]
+        if image_id in image_id_to_caption:
+            image_id_to_caption[image_id].append(caption)
+        else:
+            image_id_to_caption[image_id] = [caption]
+
+    return image_id_to_caption
 
 
-def preprocess_text(text, tokenizer, max_length):
-    text = "<START> " + text + " <END>"
-    sequence = tokenizer.texts_to_sequences([text])
-    padded_sequence = pad_sequences(sequence, maxlen=max_length, padding="post")
-    return padded_sequence
+def load_image_caption_pairs(
+    image_dir, image_id_to_caption, subset_size=None, batch_size=16, img_size=(32, 32)
+):
+    image_paths = []
+    captions = []
+
+    for image_file in os.listdir(image_dir):
+        image_id = int(
+            image_file.split(".")[0]
+        )  # Asumiendo que el nombre de la imagen es su ID
+        if image_id in image_id_to_caption:
+            image_path = os.path.join(image_dir, image_file)
+            for caption in image_id_to_caption[image_id]:
+                image_paths.append(image_path)
+                captions.append(caption)
+
+        if subset_size and len(image_paths) >= subset_size:
+            break
+
+    if subset_size:
+        image_paths = image_paths[:subset_size]
+        captions = captions[:subset_size]
+
+    return image_paths, captions
 
 
 def load_coco_dataset(
-    data_dir, annotation_file, batch_size=64, tokenizer_path="data/tokenizer.pkl"
+    image_paths,
+    captions,
+    batch_size=16,
+    img_size=(32, 32),
+    vocab_size=10000,
+    max_length=60,
 ):
-    print("Iniciando la carga del dataset COCO...")
+    def process_image(image_path):
+        image = tf.io.read_file(image_path)
+        image = tf.image.decode_jpeg(image, channels=3)
+        image = tf.image.resize(image, img_size)
+        image = image / 255.0
+        return image
 
-    coco = COCO(annotation_file)
-    print("Archivo de anotaciones cargado.")
-
-    image_ids = coco.getImgIds()
-    images_info = coco.loadImgs(image_ids)
-
-    captions = []
-    images = []
-
-    with open(tokenizer_path, "rb") as file:
-        tokenizer = pickle.load(file)
-    print("Tokenizer cargado.")
-
-    for img_info in images_info:
-        img_id = img_info["id"]
-        file_name = img_info["file_name"]
-        image_path = f"{data_dir}/{file_name}"
-
-        image = preprocess_image(image_path)
-        print(f"Imagen procesada: {file_name}")
-
-        ann_ids = coco.getAnnIds(imgIds=img_id)
-        anns = coco.loadAnns(ann_ids)
-
-        for ann in anns:
-            if "caption" in ann:
-                captions.append(ann["caption"])
-                images.append(image)
-
-    print("Todas las imágenes y captions han sido procesadas.")
-    print(f"Número total de palabras en el vocabulario: {len(tokenizer.word_index)}")
-
-    sequences = tokenizer.texts_to_sequences(captions)
-    padded_sequences = pad_sequences(sequences, maxlen=max_length)
-    print("Textos convertidos a secuencias y secuencias rellenadas.")
-
-    images = np.array(images)
-    captions = np.array(padded_sequences)
-
-    dataset = tf.data.Dataset.from_tensor_slices((images, captions))
-    dataset = (
-        dataset.shuffle(buffer_size=1024)
-        .batch(batch_size)
-        .prefetch(buffer_size=tf.data.experimental.AUTOTUNE)
+    tokenizer = tf.keras.preprocessing.text.Tokenizer(
+        num_words=vocab_size, oov_token="<OOV>"
     )
-    print("Dataset de TensorFlow creado.")
-
-    print("Carga del dataset COCO completada.")
-    return dataset
-
-
-def load_coco_subset(
-    data_dir,
-    annotation_file,
-    batch_size=64,
-    num_samples=2500,
-    tokenizer_path="data/tokenizer.pkl",
-    target_size=(
-        16,
-        16,
-    ),
-):
-    print("Iniciando la carga del subset del dataset COCO...")
-
-    coco = COCO(annotation_file)
-    image_ids = coco.getImgIds()
-
-    image_ids = image_ids[:num_samples]
-    images_info = coco.loadImgs(image_ids)
-    print(f"Archivo de anotaciones cargado. Procesando {num_samples} imágenes.")
-
-    captions = []
-    images = []
-    image_captions = {}
-
-    with open(tokenizer_path, "rb") as file:
-        tokenizer = pickle.load(file)
-    print("Tokenizer cargado.")
-
-    for img_info in images_info:
-        img_id = img_info["id"]
-        file_name = img_info["file_name"]
-        image_path = f"{data_dir}/{file_name}"
-
-        image = preprocess_image(image_path, target_size=target_size)
-        ann_ids = coco.getAnnIds(imgIds=img_id)
-        anns = coco.loadAnns(ann_ids)
-
-        image_caption_list = []
-
-        for ann in anns:
-            if "caption" in ann:
-                captions.append(ann["caption"])
-                images.append(image)
-                image_caption_list.append(ann["caption"])
-
-        image_captions[file_name] = image_caption_list
-
+    tokenizer.fit_on_texts(captions)
     sequences = tokenizer.texts_to_sequences(captions)
-    padded_sequences = pad_sequences(sequences, maxlen=max_length)
+    padded_sequences = tf.keras.preprocessing.sequence.pad_sequences(
+        sequences, maxlen=max_length, padding="post"
+    )
 
-    images = np.array(images)
-    captions = np.array(padded_sequences)
+    image_dataset = tf.data.Dataset.from_tensor_slices(image_paths)
+    image_dataset = image_dataset.map(
+        lambda x: process_image(x), num_parallel_calls=tf.data.experimental.AUTOTUNE
+    )
 
-    dataset = tf.data.Dataset.from_tensor_slices((images, captions))
+    caption_dataset = tf.data.Dataset.from_tensor_slices(padded_sequences)
+
+    dataset = tf.data.Dataset.zip((image_dataset, caption_dataset))
     dataset = (
-        dataset.shuffle(buffer_size=1024)
+        dataset.shuffle(buffer_size=len(image_paths))
         .batch(batch_size)
         .prefetch(buffer_size=tf.data.experimental.AUTOTUNE)
     )
 
-    print("Carga del subset del dataset COCO completada.")
-
-    # for img_name, captions in image_captions.items():
-    #     with open("data/captions_200.txt", "a") as file:
-    #         file.write(f"Imagen: {img_name}\n")
-    #         for caption in captions:
-    #             file.write(f"  - {caption}\n")
-    #         file.write("\n")
-
-    return dataset
+    return dataset, tokenizer

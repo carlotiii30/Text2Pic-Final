@@ -1,116 +1,124 @@
-from matplotlib import pyplot as plt
-import numpy as np
-from tensorflow.image import resize
-from tensorflow.keras.callbacks import EarlyStopping, ReduceLROnPlateau
-from tensorflow.keras.preprocessing.image import ImageDataGenerator
-
-latent_dim = 150
-max_length = 60  # Longitud máxima de los captions
+import os
+import tensorflow as tf
+import matplotlib.pyplot as plt
 
 
-def resize_real_images(imgs):
-    return resize(imgs, (32, 64))
+def wasserstein_loss(y_true, y_pred):
+    return tf.reduce_mean(y_true * y_pred)
 
 
-def train(
+def train_gan(
     generator,
     discriminator,
-    combined,
     dataset,
-    epochs=5,
-    batch_size=64,
-    patience=100,
+    latent_dim,
+    epochs=9,
+    save_every=3,
+    save_path="data/models",
 ):
-    print("Iniciando el entrenamiento...")
+    batch_size = 16
+    valid = tf.random.uniform(
+        (batch_size, 1), 0.9, 1.1
+    )  # Menos variación en etiquetas reales
+    fake = tf.random.uniform(
+        (batch_size, 1), 0.0, 0.1
+    )  # Menos ruido en etiquetas falsas
 
-    # Callbacks
-    early_stopping = EarlyStopping(
-        monitor="g_loss", patience=patience, restore_best_weights=True, mode="min"
-    )
-    early_stopping.set_model(combined)
+    # Tasas de aprendizaje ajustadas
+    optimizer_g = tf.keras.optimizers.Adam(
+        learning_rate=0.0003
+    )  # Menor tasa para estabilizar
+    optimizer_d = tf.keras.optimizers.Adam(
+        learning_rate=0.00002
+    )  # Menor tasa para estabilizar
 
-    lr_scheduler = ReduceLROnPlateau(
-        monitor="g_loss", factor=0.5, patience=10, min_lr=1e-6, verbose=1
-    )
-    lr_scheduler.set_model(combined)
+    discriminator.compile(loss=wasserstein_loss, optimizer=optimizer_d)
 
-    g_losses = []
-    d_losses = []
+    noise = tf.keras.Input(shape=(latent_dim,))
+    caption = tf.keras.Input(shape=(dataset.element_spec[1].shape[1],))
+    generated_image = generator([noise, caption])
 
-    with open("training_log.txt", "w") as file:
-        file.write("Epoch\tGenerator Loss\tDiscriminator Loss\n")
-        for epoch in range(epochs):
-            print(f"Epoch {epoch+1}/{epochs} iniciada.")
+    discriminator.trainable = False
+    valid_prediction = discriminator([generated_image, caption])
 
-            for batch in dataset:
-                imgs, captions = batch
-                resized_imgs = resize_real_images(imgs)
+    gan_model = tf.keras.Model([noise, caption], valid_prediction)
+    gan_model.compile(loss=wasserstein_loss, optimizer=optimizer_g)
 
-                if imgs.shape[0] != batch_size:
-                    continue
+    g_losses_history = []
+    d_losses_history = []
 
-                # Ajusta el tamaño del vector de ruido
-                noise_dim = latent_dim
-                noise = np.random.normal(0, 1, (batch_size, noise_dim))
-                captions_input = np.array(captions)
+    for epoch in range(epochs):
+        g_losses = []
+        d_losses = []
 
-                # Entrenar al discriminador
-                for _ in range(2):
-                    # Generar imágenes falsas
-                    gen_imgs = generator.predict([noise, captions_input])
+        for image_batch, caption_batch in dataset:
+            batch_size = image_batch.shape[0]
+            noise = tf.random.normal([batch_size, latent_dim])
 
-                    # Etiquetas para las imágenes reales y falsas
-                    valid = np.ones((batch_size, 1)) * 0.9
-                    fake = np.zeros((batch_size, 1)) + 0.1
+            generated_images = generator.predict([noise, caption_batch])
 
-                    # Entrena al discriminador (real y falso)
-                    d_loss_real = discriminator.train_on_batch(
-                        [resized_imgs, captions_input], valid
-                    )
-                    d_loss_fake = discriminator.train_on_batch(
-                        [gen_imgs, captions_input], fake
-                    )
+            # Entrenar el discriminador
+            d_loss_real = discriminator.train_on_batch(
+                [image_batch, caption_batch], valid[:batch_size]
+            )
+            d_loss_fake = discriminator.train_on_batch(
+                [generated_images, caption_batch], fake[:batch_size]
+            )
+            d_loss = 0.5 * (d_loss_real + d_loss_fake)
+            d_losses.append(d_loss)
 
-                    # Calcula la pérdida del discriminador
-                    d_losses.append(0.5 * np.add(d_loss_real, d_loss_fake))
-
-                # Entrena al generador
-                discriminator.trainable = False
-                g_loss = combined.train_on_batch([noise, captions_input], valid)
-                discriminator.trainable = True
-
-                # Guarda la pérdida del generador
+            for _ in range(5):
+                g_loss = gan_model.train_on_batch(
+                    [noise, caption_batch], valid[:batch_size]
+                )
                 g_losses.append(g_loss)
 
-            # Guardar el estado del modelo y aplicar early stopping
-            avg_g_loss = np.mean(g_losses)
-            avg_d_loss = np.mean(d_losses)
-            print(
-                f"Epoch {epoch+1}/{epochs} FINALIZADA con g_loss: {avg_g_loss} y d_loss: {avg_d_loss}"
+        avg_g_loss = tf.reduce_mean(g_losses).numpy()
+        avg_d_loss = tf.reduce_mean(d_losses).numpy()
+
+        g_losses_history.append(avg_g_loss)
+        d_losses_history.append(avg_d_loss)
+
+        print(
+            f"Epoch {epoch + 1}/{epochs} - D Loss: {avg_d_loss:.4f} - G Loss: {avg_g_loss:.4f}"
+        )
+
+        with open("training.log", "a") as f:
+            f.write(
+                f"Epoch {epoch + 1}/{epochs} - D Loss: {avg_d_loss:.4f} - G Loss: {avg_g_loss:.4f}\n"
             )
 
-            file.write(f"{epoch + 1}\t{avg_g_loss}\t{avg_d_loss}\n")
+        if (epoch + 1) % save_every == 0:
+            generator.save(os.path.join(save_path, f"generator_epoch_{epoch + 1}.h5"))
+            discriminator.save(
+                os.path.join(save_path, f"discriminator_epoch_{epoch + 1}.h5")
+            )
+            print(f"Modelos guardados en la época {epoch + 1}.")
 
-            # Callbacks
-            early_stopping.on_epoch_end(epoch, {"g_loss": avg_g_loss})
-            lr_scheduler.on_epoch_end(epoch, {"g_loss": avg_g_loss})
+    generator.save(os.path.join(save_path, "generator_final.h5"))
+    discriminator.save(os.path.join(save_path, "discriminator_final.h5"))
+    print("Modelos finales guardados.")
 
-            # Aplicar early stopping si no hay mejoras
-            if early_stopping.stopped_epoch:
-                print(
-                    f"Entrenamiento detenido temprano en la epoch {early_stopping.stopped_epoch + 1}"
-                )
-                break
+    # Generar gráfico de las pérdidas
+    # plot_losses(g_losses_history, d_losses_history)
 
-        # Graficar las pérdidas al finalizar el entrenamiento
-        # plt.figure(figsize=(10, 5))
-        # plt.plot(g_losses, label="Generator Loss", color="blue")
-        # plt.plot(d_losses, label="Discriminator Loss", color="red")
-        # plt.title("Losses during Training")
-        # plt.xlabel("Epochs")
-        # plt.ylabel("Loss")
-        # plt.legend()
-        # plt.grid()
-        # plt.show()
 
-    print("Entrenamiento completado.")
+def plot_losses(g_losses_history, d_losses_history):
+    plt.figure(figsize=(10, 5))
+
+    # Curva de pérdida del generador
+    plt.plot(g_losses_history, label="Generador (G Loss)", color="blue")
+
+    # Curva de pérdida del discriminador
+    plt.plot(d_losses_history, label="Discriminador (D Loss)", color="red")
+
+    plt.title("Curvas de pérdida - Generador vs Discriminador")
+    plt.xlabel("Épocas")
+    plt.ylabel("Pérdida")
+    plt.legend()
+
+    # Guardar el gráfico
+    plt.savefig("gan_loss_curves.png")
+
+    # Mostrar el gráfico
+    plt.show()
